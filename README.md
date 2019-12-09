@@ -1,2 +1,2 @@
-# InformationSystem(Upgraded
+# InformationSystem(Upgraded)
  Lab№2
