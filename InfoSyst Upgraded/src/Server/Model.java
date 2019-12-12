@@ -1,6 +1,8 @@
-package MVS;
+package Server;
 
 import InformationClasses.*;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -12,7 +14,11 @@ import java.util.ArrayList;
  */
 class Model {
 
-    private static EventManager viewConnection = new EventManager(new View());
+    private static EventManager controllerConnection ;
+
+    public static void setControllerConnection(EventManager controllerConnection) {
+        Model.controllerConnection = controllerConnection;
+    }
 
     /**
      * Data is stored in serialized form;
@@ -22,20 +28,24 @@ class Model {
      * As a database while the Library is running used class from java.util -
      * ArrayList;
      */
-    private static final File DIRECTORY = new File("C://Users//HP//Documents//GitHub//Information-System//Iformation System//src");
+    private static final File DIRECTORY = new File("C:\\Users\\HP\\Documents\\GitHub\\InformationSystem-Upgraded\\InfoSyst Upgraded\\src");
     private static final File DATABASE = new File(DIRECTORY, "Database.txt");
     private static ArrayList<LibraryInfo> runtimeDatabase = new ArrayList<>();
 
+
+    public static ArrayList<LibraryInfo> getRuntimeDatabase() {
+        return runtimeDatabase;
+    }
 
     /**
      * This method is used to print Library;
      */
     static void showDatabase() {
         if (runtimeDatabase.size() == 0) {
-            viewConnection.notify(" Library is empty ");
+            controllerConnection.notify(" Library is empty ");
         }
         for (Object object : runtimeDatabase) {
-            viewConnection.notify(object.toString());
+            controllerConnection.notify(object.toString());
         }
     }
 
@@ -49,7 +59,7 @@ class Model {
 
     private static boolean isIndexInRange(int index) {
         if (index > runtimeDatabase.size() || index <= 0) {
-            viewConnection.notify(" The index goes beyond the boundaries of the library ");
+            controllerConnection.notify(" The index goes beyond the boundaries of the library ");
             return false;
         }
         return true;
@@ -76,12 +86,12 @@ class Model {
                 }
             }
             catch (IOException e) {
-                viewConnection.notify(" File read successfully ");
+                controllerConnection.notify(" File read successfully ");
             }
             input.close();
         }
         else{
-            viewConnection.notify(" Invalid filename ");
+            controllerConnection.notify(" Invalid filename ");
         }
     }
 
@@ -93,7 +103,7 @@ class Model {
      */
 
     static void search(String template) {
-        viewConnection.notify(" Searching results:: ");
+        controllerConnection.notify(" Searching results:: ");
         for (int i = 0; i < runtimeDatabase.size(); ++i) {
             if (runtimeDatabase.get(i).toString().contains(template)) {
                 getInfFromBase(i);
@@ -128,9 +138,9 @@ class Model {
     static void addInfToBase(LibraryInfo book) {
         if (!runtimeDatabase.contains(book)) {
             runtimeDatabase.add(book);
-            viewConnection.notify(" Data added successfully ");
+            controllerConnection.notify(" Data added successfully ");
         } else {
-            viewConnection.notify(" Such data already exists, object not added ");
+            controllerConnection.notify(" Such data already exists, object not added ");
         }
     }
 
@@ -143,7 +153,7 @@ class Model {
 
     static void getInfFromBase(int index) {
         if (isIndexInRange(index))
-            viewConnection.notify(runtimeDatabase.get(index).toString());
+            controllerConnection.notify(runtimeDatabase.get(index).toString());
     }
 
 
@@ -162,7 +172,7 @@ class Model {
             } else {
                 runtimeDatabase.remove(index);
             }
-            viewConnection.notify(" Data deleted successfully ");
+            controllerConnection.notify(" Data deleted successfully ");
         }
     }
 
@@ -171,7 +181,7 @@ class Model {
      * This method is used to clear library(delete all elements);
      */
     static void clear() {
-        viewConnection.notify(" All data is deleted ");
+        controllerConnection.notify(" All data is deleted ");
         runtimeDatabase.clear();
     }
 
@@ -186,9 +196,9 @@ class Model {
     static void setInfInBase(int index, LibraryInfo newInf) {
         if (!runtimeDatabase.contains(newInf) && isIndexInRange(index)) {
             runtimeDatabase.set(index, newInf);
-            viewConnection.notify(" Data changed successfully ");
+            controllerConnection.notify(" Data changed successfully ");
         } else {
-            viewConnection.notify(" Such data already exists, object not changed ");
+            controllerConnection.notify(" Such data already exists, object not changed ");
         }
     }
 
@@ -203,7 +213,7 @@ class Model {
             output.writeObject(runtimeDatabase);
             output.close();
         }catch (IOException e){
-            viewConnection.notify(" Update Database Error ");
+            controllerConnection.notify(" Update Database Error ");
         }
     }
 

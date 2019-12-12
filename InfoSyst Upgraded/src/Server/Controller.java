@@ -1,21 +1,43 @@
-package MVS;
+package Server;
 
 import InformationClasses.*;
 
 import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 /**
  * Controller - works with user, read and checks commands
  */
-public class Controller implements EventListener {
+public class Controller {
 
+    private static ServerSocket serverSocket;
+    private static Socket client;
+    private static ObjectOutputStream outputStream;
+    private static ObjectInputStream inputStream;
 
-    private EventManager viewConnection;
+    public static void main(String[] args) {
 
-    Controller(EventManager viewConnection){
-        this.viewConnection = viewConnection;
+        try {
+            String clientCommand;
+            serverSocket = new ServerSocket(1600);
+            client = serverSocket.accept();
+            Model.updateRuntimeDatabase();
+            inputStream = new ObjectInputStream(client.getInputStream());
+            outputStream = new ObjectOutputStream(client.getOutputStream());
+            outputStream.writeObject(Model.getRuntimeDatabase());
+            while (!serverSocket.isClosed()) {
+                if (inputStream.available() != 0) {
+                    clientCommand = inputStream.readUTF();
+                    getCommand(clientCommand);
+                }
+            }
+        }
+        catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
     }
-
 
 
     /**
@@ -27,11 +49,11 @@ public class Controller implements EventListener {
      * @throws IOException-
      */
 
-    private  void getInfo(StreamTokenizer input) throws IOException {
+    private static void getInfo(StreamTokenizer input) throws IOException {
         input.nextToken();
         int position = (int) input.nval;
         if (input.sval != null) {
-            viewConnection.notify(" The information entered is not an index ");
+            //viewConnection.notify(" The information entered is not an index ");
         } else
             Model.getInfFromBase(position);
     }
@@ -44,7 +66,7 @@ public class Controller implements EventListener {
      * @throws IOException-
      */
 
-    private void setBook(StreamTokenizer input) throws IOException {
+    private static void setBook(StreamTokenizer input) throws IOException {
         String authors, title;
         int publishingYear, pagesNumber;
         int position;
@@ -68,7 +90,7 @@ public class Controller implements EventListener {
             Model.setInfInBase(position, new Book(authors, title, publishingYear, pagesNumber));
         }
         catch (BadFieldsException e) {
-            viewConnection.notify(e.getMessage());
+            outputStream.writeUTF("EXP " + e.getMessage());
         }
     }
 
@@ -81,7 +103,7 @@ public class Controller implements EventListener {
      * @throws IOException-
      */
 
-    private void setBookInstance(StreamTokenizer input) throws IOException {
+    private static void setBookInstance(StreamTokenizer input) throws IOException {
         String authors, title;
         int publishingYear, pagesNumber;
         int position;
@@ -110,7 +132,7 @@ public class Controller implements EventListener {
             Model.setInfInBase(position, new BookInstance(new Book(authors, title, publishingYear, pagesNumber), issued));
         }
         catch (BadFieldsException e) {
-            viewConnection.notify(e.getMessage());
+            outputStream.writeUTF("EXP " + e.getMessage());
         }
     }
 
@@ -123,11 +145,11 @@ public class Controller implements EventListener {
      * @see 89-90
      */
 
-    private  void deleteInfo(StreamTokenizer input) throws IOException {
+    private static void deleteInfo(StreamTokenizer input) throws IOException {
         input.nextToken();
         int position = (int) input.nval;
         if (input.sval != null) {
-            viewConnection.notify(" The information entered is not an index ");
+            // viewConnection.notify(" The information entered is not an index ");
         } else
             Model.deleteInfFromBase(position);
     }
@@ -141,7 +163,7 @@ public class Controller implements EventListener {
      * @throws IOException-
      */
 
-    private  void addBook(StreamTokenizer input) throws IOException {
+    private static void addBook(StreamTokenizer input) throws IOException {
         String authors, title;
         int publishingYear, pagesNumber;
         input.nextToken();
@@ -162,7 +184,7 @@ public class Controller implements EventListener {
             Model.addInfToBase(new Book(authors, title, publishingYear, pagesNumber));
         }
         catch (BadFieldsException e) {
-            viewConnection.notify(e.getMessage());
+            outputStream.writeUTF("EXP " + e.getMessage());
         }
 
     }
@@ -176,7 +198,7 @@ public class Controller implements EventListener {
      * @throws IOException-
      */
 
-    private  void addBookInstance(StreamTokenizer input) throws IOException {
+    private static void addBookInstance(StreamTokenizer input) throws IOException {
         String authors, title;
         int publishingYear, pagesNumber;
         boolean issued = false;
@@ -202,7 +224,7 @@ public class Controller implements EventListener {
             Model.addInfToBase(new BookInstance(new Book(authors, title, publishingYear, pagesNumber), issued));
         }
         catch (BadFieldsException e) {
-            viewConnection.notify(e.getMessage());
+            outputStream.writeUTF("EXP " + e.getMessage());
         }
     }
 
@@ -214,7 +236,7 @@ public class Controller implements EventListener {
      * @throws IOException-
      */
 
-    private void addInfFromFile(StreamTokenizer input) throws IOException, ClassNotFoundException {
+    private static void addInfFromFile(StreamTokenizer input) throws IOException, ClassNotFoundException {
         String filename;
         input.nextToken();
         filename = input.sval;
@@ -229,7 +251,7 @@ public class Controller implements EventListener {
      * @throws IOException-
      */
 
-    private  void templateSearch(StreamTokenizer input) throws IOException {
+    private static void templateSearch(StreamTokenizer input) throws IOException {
         String template;
         input.nextToken();
         template = input.sval;
@@ -246,81 +268,67 @@ public class Controller implements EventListener {
      * @param in - input stream(Console)
      */
 
-    private  void getCommand(String in) throws IOException, ClassNotFoundException {
+    private static void getCommand(String in) throws IOException, ClassNotFoundException {
 
-            StreamTokenizer input = new StreamTokenizer(new StringReader(in));
-            input.nextToken();
-            String comm = input.sval;
-            if (comm != null) {
-                switch (comm.toLowerCase()) {
-                    case ("get"): {
-                        getInfo(input);
-                        break;
-                    }
-                    case ("setbook"): {
-                        setBook(input);
-                        break;
-                    }
-                    case ("setbookinst"): {
-                        setBookInstance(input);
-                        break;
-                    }
-                    case ("delete"): {
-                        deleteInfo(input);
-                        break;
-                    }
-                    case ("clear"): {
-                        Model.clear();
-                        break;
-                    }
-                    case ("addbook"): {
-                        addBook(input);
-                        break;
-                    }
-                    case ("addbookinst"): {
-                        addBookInstance(input);
-                        break;
-                    }
-                    case ("addinffromfile"): {
-                        addInfFromFile(input);
-                        break;
-                    }
-                    case ("show"): {
-                        Model.showDatabase();
-                        break;
-                    }
-                    case ("search"): {
-                        templateSearch(input);
-                        break;
-                    }
-                    case ("updateruntime"):{
-                        Model.updateRuntimeDatabase();
-                        break;
-                    }
-                    case ("update"):{
-                        Model.updateDatabase();
-                        break;
-                    }
-                    case ("exit"): {
-                        Model.updateDatabase();
-                        viewConnection.notify(" Successfully completing the Library ");
-                    }
-                    default: {
-                        viewConnection.notify(" The entered string is not a reference command ");
-                    }
+        StreamTokenizer input = new StreamTokenizer(new StringReader(in));
+        input.nextToken();
+        String comm = input.sval;
+        if (comm != null) {
+            switch (comm.toLowerCase()) {
+                case ("get"): {
+                    getInfo(input);
+                    break;
                 }
-            } else {
-                viewConnection.notify(" The entered string is not a reference command ");
+                case ("setbook"): {
+                    setBook(input);
+                    break;
+                }
+                case ("setbookinst"): {
+                    setBookInstance(input);
+                    break;
+                }
+                case ("delete"): {
+                    deleteInfo(input);
+                    break;
+                }
+                case ("clear"): {
+                    Model.clear();
+                    break;
+                }
+                case ("addbook"): {
+                    addBook(input);
+                    break;
+                }
+                case ("addbookinst"): {
+                    addBookInstance(input);
+                    break;
+                }
+                case ("addinffromfile"): {
+                    addInfFromFile(input);
+                    break;
+                }
+                case ("search"): {
+                    templateSearch(input);
+                    break;
+                }
+                case ("updateruntime"): {
+                    Model.updateRuntimeDatabase();
+                    break;
+                }
+                case ("update"): {
+                    Model.updateDatabase();
+                    break;
+                }
+                case ("exit"): {
+                    Model.updateDatabase();
+                }
+                default: {
+                    // viewConnection.notify(" The entered string is not a reference command ");
+                }
             }
-    }
-
-    @Override
-    public void update(String eventType) {
-        try {
-            getCommand(eventType);
-        }catch (IOException|ClassNotFoundException e){
-            viewConnection.notify(" Invalid program end, data is saved in Database ");
-            Model.updateDatabase();
+        } else {
+            //viewConnection.notify(" The entered string is not a reference command ");
         }
     }
+
 }
