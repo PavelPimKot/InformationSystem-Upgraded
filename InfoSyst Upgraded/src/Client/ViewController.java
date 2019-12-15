@@ -7,12 +7,15 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.Alert;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import javafx.util.Pair;
 
 import java.io.*;
 import java.net.Socket;
@@ -40,6 +43,15 @@ public class ViewController extends Application {
         launch(args);
     }
 
+    private void alertPain (String info){
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.initModality(Modality.APPLICATION_MODAL);
+        alert.setTitle("Exception");
+        alert.setHeaderText(null);
+        alert.setContentText(info);
+        alert.showAndWait();
+    }
+
     @FXML
     private TableColumn<String, String> infoColumn;
 
@@ -59,45 +71,73 @@ public class ViewController extends Application {
     private TextField deleteInfoField;
 
 
-    /*
-    сообщения о какой либо ошибке на сервере принимаем как строку начинающуся с "EXP"
-    сообщение об ошибке вывести в отдельном окне
-     */
-
     @FXML
     void AddPressed(ActionEvent event) throws IOException {
-        /*
-        отправить запрос на сервев - ответ идекс куда нужно добавить нужный нам объект
-         */
         String input = addInfoField.getText();
         int blocCount = input.split(" +").length;
         switch (blocCount) {
             case 4: {
                 outputStream.writeUTF("addbook " + addInfoField.getText());
+                outputStream.flush();
                 break;
             }
             case 5: {
                 outputStream.writeUTF("addbookinst " + addInfoField.getText());
+                outputStream.flush();
                 break;
             }
             default: {
-
+                alertPain(" Written text isn't LibraryInformation ");
             }
         }
-        viewTableInfo.add(addInfoField.getText());
+        String index = inputStream.readUTF();
+        if (index.contains("EXP")) {
+           alertPain(index);
+        } else {
+            String serverAnswer = inputStream.readUTF();
+            if (serverAnswer.contains("EXP")) {
+                alertPain(serverAnswer);
+            }
+            else {
+                viewTableInfo.add(Integer.parseInt(index), serverAnswer);
+            }
+        }
     }
 
     @FXML
     void DeletePressed(ActionEvent event) throws IOException {
-        /*
-        удаление по выбранной строке + удаление по заданному шаблону , при удалении по индексу
-        просто удаляем из таблицы + запрос на модель для удаления
-        если шаблонный - тоже самое только использую поиск
-         */
+
         if (deleteInfoField.getText().length() != 0) {
-            outputStream.writeUTF("delete " + addInfoField.getText());
+            outputStream.writeUTF("delete " + deleteInfoField.getText());
+            outputStream.flush();
         } else {
             outputStream.writeUTF("delete " + mainTable.getSelectionModel().getFocusedIndex());
+            outputStream.flush();
+        }
+        String serverAnswer = inputStream.readUTF();
+        if (serverAnswer.contains("EXP")) {
+            alertPain(serverAnswer);
+        } else {
+
+            StreamTokenizer parce = new StreamTokenizer(new StringReader(serverAnswer));
+            int biggest = 0;
+            int index;
+            for (int i = 0; true; i++) {
+                parce.nextToken();
+                if (parce.ttype == StreamTokenizer.TT_EOF) {
+                    break;
+                }
+                index = (int) parce.nval;
+                if (index > biggest) {
+                    if (i != 0) {
+                        --index;
+                    }
+                    biggest = index;
+                }
+                viewTableInfo.remove(index);
+            }
+
+
         }
 
     }
@@ -105,52 +145,91 @@ public class ViewController extends Application {
     @FXML
     void SearchPressed(ActionEvent event) throws IOException {
         outputStream.writeUTF("search " + templateSearchField.getText());
-        /*
-        получить от сервера список индексов подходящих под нужный запрос , вывести их в отдельном окне
-         */
+        outputStream.flush();
+        String serverAnswer = inputStream.readUTF();
+        if (serverAnswer.contains("EXP")) {
+            alertPain(serverAnswer);
+        } else {
+            StreamTokenizer parce = new StreamTokenizer(new StringReader(serverAnswer));
+            ObservableList<Pair<Integer, String>> searchResult = FXCollections.observableArrayList();
+            for (int i = 0; true; i++) {
+                parce.nextToken();
+                if (parce.ttype == StreamTokenizer.TT_EOF) {
+                    break;
+                }
+
+                searchResult.add(new Pair<Integer, String>((int) parce.nval, viewTableInfo.get((int) parce.nval)));
+            }
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("SearchTable.fxml"));
+            Stage searchStage = loader.load();
+            SearchTableController controller = loader.getController();
+            controller.setSearchInfo(searchResult);
+            searchStage.initModality(Modality.APPLICATION_MODAL);
+            searchStage.show();
+        }
     }
 
     @FXML
     void MainStageClose(WindowEvent event) throws IOException {
-        outputStream.writeUTF("exit ");
-        /*
-        сервер увидев данное сообщение тоже завершает свою работу
-         */
+        outputStream.writeUTF("exit");
+        outputStream.close();
         mainStage.close();
     }
 
     @FXML
     void columnEditCommit(TableColumn.CellEditEvent event) throws IOException {
-        int index = event.getTableView().getSelectionModel().getFocusedIndex();
-        String  input = event.getNewValue().toString();
-        int blocCount = input.split(" +").length;
-        switch (blocCount) {
-            case 4: {
-                outputStream.writeUTF("setbook " + input);
-                break;
-            }
-            case 5: {
-                outputStream.writeUTF("setbookinst " + input);
-                break;
-            }
-            default: {
+        int focusedIndex = event.getTableView().getSelectionModel().getFocusedIndex();
+        String input = event.getNewValue().toString();
+        if (input.length() == 0) {
+            outputStream.writeUTF("delete " + focusedIndex);
+            outputStream.flush();
+            viewTableInfo.remove(focusedIndex);
+        } else {
+            int blocCount = input.split(" +").length;
+            switch (blocCount) {
+                case 4: {
+                    outputStream.writeUTF("setbook " + focusedIndex + " " + input);
+                    outputStream.flush();
+                    break;
+                }
+                case 5: {
+                    outputStream.writeUTF("setbookinst " + focusedIndex + " " + input);
+                    outputStream.flush();
+                    break;
+                }
+                default: {
 
+                }
+            }
+            String index = inputStream.readUTF();
+            if (index.contains("EXP")) {
+                alertPain(index);
+            } else {
+                String serverAnswer = inputStream.readUTF();
+                if (serverAnswer.contains("EXP")) {
+                    alertPain(serverAnswer);
+                }
+                else {
+                    viewTableInfo.remove(focusedIndex);
+                    viewTableInfo.add(Integer.parseInt(index), serverAnswer);
+                }
             }
         }
-        viewTableInfo.set(index, input);
     }
-
 
 
     @FXML
     void initialize() throws IOException, ClassNotFoundException {
         ArrayList<Object> getted = (ArrayList<Object>) inputStream.readObject();
         viewTableInfo = FXCollections.observableArrayList();
-        for(  Object o :getted){
+        for (Object o : getted) {
             viewTableInfo.add(o.toString());
         }
         infoColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue()));
         infoColumn.setCellFactory(TextFieldTableCell.forTableColumn());
         mainTable.setItems(viewTableInfo);
     }
+
+
 }

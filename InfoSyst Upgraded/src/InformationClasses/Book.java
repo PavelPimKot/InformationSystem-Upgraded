@@ -81,4 +81,8 @@ public class Book extends LibraryInfo implements Serializable  {
     }
 
 
+    @Override
+    public Book getBook() {
+        return this;
+    }
 }

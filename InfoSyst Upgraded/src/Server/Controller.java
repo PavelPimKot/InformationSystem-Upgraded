@@ -5,11 +5,12 @@ import InformationClasses.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Comparator;
 
 /**
  * Controller - works with user, read and checks commands
  */
-public class Controller {
+public class Controller implements EventListener {
 
     private static ServerSocket serverSocket;
     private static Socket client;
@@ -19,14 +20,21 @@ public class Controller {
     public static void main(String[] args) {
 
         try {
-            String clientCommand;
+            String clientCommand = "";
             serverSocket = new ServerSocket(1600);
             client = serverSocket.accept();
+
             Model.updateRuntimeDatabase();
+            Model.setComparator(new Comparator<LibraryInfo>() {
+                @Override
+                public int compare(LibraryInfo o1, LibraryInfo o2) {
+                    return  o1.getBook().getTitle().compareTo(o2.getBook().getTitle());
+                }
+            });
             inputStream = new ObjectInputStream(client.getInputStream());
             outputStream = new ObjectOutputStream(client.getOutputStream());
             outputStream.writeObject(Model.getRuntimeDatabase());
-            while (!serverSocket.isClosed()) {
+            while (!serverSocket.isClosed() && !clientCommand.equals("exit")) {
                 if (inputStream.available() != 0) {
                     clientCommand = inputStream.readUTF();
                     getCommand(clientCommand);
@@ -91,6 +99,7 @@ public class Controller {
         }
         catch (BadFieldsException e) {
             outputStream.writeUTF("EXP " + e.getMessage());
+            outputStream.flush();
         }
     }
 
@@ -125,14 +134,16 @@ public class Controller {
         input.nextToken();
         pagesNumber = (int) input.nval;
         input.nextToken();
-        if (input.sval.equals("true")) {
-            issued = true;
-        }
+        if (input.sval != null)
+            if (input.sval.equals("true")) {
+                issued = true;
+            }
         try {
             Model.setInfInBase(position, new BookInstance(new Book(authors, title, publishingYear, pagesNumber), issued));
         }
         catch (BadFieldsException e) {
             outputStream.writeUTF("EXP " + e.getMessage());
+            outputStream.flush();
         }
     }
 
@@ -185,6 +196,7 @@ public class Controller {
         }
         catch (BadFieldsException e) {
             outputStream.writeUTF("EXP " + e.getMessage());
+            outputStream.flush();
         }
 
     }
@@ -225,6 +237,7 @@ public class Controller {
         }
         catch (BadFieldsException e) {
             outputStream.writeUTF("EXP " + e.getMessage());
+            outputStream.flush();
         }
     }
 
@@ -323,12 +336,23 @@ public class Controller {
                     Model.updateDatabase();
                 }
                 default: {
-                    // viewConnection.notify(" The entered string is not a reference command ");
+                    //  outputStream.writeUTF("EXP The entered string is not a reference command ");
                 }
             }
         } else {
-            //viewConnection.notify(" The entered string is not a reference command ");
+            //   outputStream.writeUTF("EXP The entered string is not a reference command ");
+
         }
     }
 
+    @Override
+    public void update(String eventType) {
+        try {
+            outputStream.writeUTF(eventType);
+            outputStream.flush();
+        }
+        catch (IOException E) {
+            E.printStackTrace();
+        }
+    }
 }

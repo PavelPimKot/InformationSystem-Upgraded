@@ -1,12 +1,10 @@
 package Server;
 
 import InformationClasses.*;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 
 import java.io.*;
 import java.util.ArrayList;
-
+import java.util.Comparator;
 
 
 /**
@@ -14,11 +12,8 @@ import java.util.ArrayList;
  */
 class Model {
 
-    private static EventManager controllerConnection ;
+    private static EventManager controllerConnection = new EventManager(new Controller());
 
-    public static void setControllerConnection(EventManager controllerConnection) {
-        Model.controllerConnection = controllerConnection;
-    }
 
     /**
      * Data is stored in serialized form;
@@ -37,17 +32,10 @@ class Model {
         return runtimeDatabase;
     }
 
-    /**
-     * This method is used to print Library;
-     */
-    static void showDatabase() {
-        if (runtimeDatabase.size() == 0) {
-            controllerConnection.notify(" Library is empty ");
-        }
-        for (Object object : runtimeDatabase) {
-            controllerConnection.notify(object.toString());
-        }
+    public static void setComparator(Comparator<LibraryInfo> comparator) {
+        runtimeDatabase.sort(comparator);
     }
+
 
 
     /**
@@ -58,8 +46,8 @@ class Model {
      */
 
     private static boolean isIndexInRange(int index) {
-        if (index > runtimeDatabase.size() || index <= 0) {
-            controllerConnection.notify(" The index goes beyond the boundaries of the library ");
+        if (index > runtimeDatabase.size() || index < 0) {
+            controllerConnection.notify("EXP: The index goes beyond the boundaries of the library ");
             return false;
         }
         return true;
@@ -80,8 +68,8 @@ class Model {
             try {
                 while (true) {
                     Object inf = input.readObject();
-                    if (inf instanceof LibraryInfo ) {
-                        addInfToBase((LibraryInfo)inf);
+                    if (inf instanceof LibraryInfo) {
+                        addInfToBase((LibraryInfo) inf);
                     }
                 }
             }
@@ -89,8 +77,7 @@ class Model {
                 controllerConnection.notify(" File read successfully ");
             }
             input.close();
-        }
-        else{
+        } else {
             controllerConnection.notify(" Invalid filename ");
         }
     }
@@ -103,12 +90,14 @@ class Model {
      */
 
     static void search(String template) {
-        controllerConnection.notify(" Searching results:: ");
+        StringBuilder serverAnswer = new StringBuilder();
         for (int i = 0; i < runtimeDatabase.size(); ++i) {
             if (runtimeDatabase.get(i).toString().contains(template)) {
-                getInfFromBase(i);
+                serverAnswer.append(" ").append(i).append(" ");
+                //getInfFromBase(i);
             }
         }
+        controllerConnection.notify(serverAnswer.toString());
     }
 
 
@@ -136,11 +125,19 @@ class Model {
      */
 
     static void addInfToBase(LibraryInfo book) {
+        int index = 0;
         if (!runtimeDatabase.contains(book)) {
-            runtimeDatabase.add(book);
-            controllerConnection.notify(" Data added successfully ");
+            for (int i = 0; i < runtimeDatabase.size(); ++i) {
+                if (runtimeDatabase.get(i).getBook().getTitle().compareTo(book.getBook().getTitle()) >= 0) {
+                    runtimeDatabase.add(i, book);
+                    index = i;
+                    break;
+                }
+            }
+            controllerConnection.notify(Integer.toString(index));
+            controllerConnection.notify(book.toString());
         } else {
-            controllerConnection.notify(" Such data already exists, object not added ");
+            controllerConnection.notify("EXP: Such data already exists, object not added ");
         }
     }
 
@@ -165,20 +162,27 @@ class Model {
 
     static void deleteInfFromBase(int index) {
         if (isIndexInRange(index)) {
+            StringBuilder serverAnswer = new StringBuilder(Integer.toString(index));
             if (runtimeDatabase.get(index) instanceof BookInstance) {
                 BookInstance toDelete = (BookInstance) runtimeDatabase.get(index);
+                for (int i = 0; i < runtimeDatabase.size(); ++i) {
+                    LibraryInfo o = runtimeDatabase.get(i);
+                    if (o instanceof Book && toDelete.getBook().equals(o)) {
+                        serverAnswer.append(" ").append(i);
+                    }
+                }
                 runtimeDatabase.removeIf(i -> (toDelete.getBook().equals(i)));
                 runtimeDatabase.remove(toDelete);
             } else {
                 runtimeDatabase.remove(index);
             }
-            controllerConnection.notify(" Data deleted successfully ");
+            controllerConnection.notify(serverAnswer.toString());
         }
     }
 
 
     /**
-     * This method is used to clear library(delete all elements);
+     * This method is used to clear library(delete all elements);   q
      */
     static void clear() {
         controllerConnection.notify(" All data is deleted ");
@@ -195,10 +199,10 @@ class Model {
 
     static void setInfInBase(int index, LibraryInfo newInf) {
         if (!runtimeDatabase.contains(newInf) && isIndexInRange(index)) {
-            runtimeDatabase.set(index, newInf);
-            controllerConnection.notify(" Data changed successfully ");
+            runtimeDatabase.remove(index);
+            addInfToBase(newInf);
         } else {
-            controllerConnection.notify(" Such data already exists, object not changed ");
+            controllerConnection.notify("EXP:  Such data already exists, object not changed ");
         }
     }
 
@@ -207,13 +211,14 @@ class Model {
      * This method is used to update info in Database , call him before exit the library;
      */
 
-    static void updateDatabase()  {
+    static void updateDatabase() {
         try {
             ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(DATABASE));
             output.writeObject(runtimeDatabase);
             output.close();
-        }catch (IOException e){
-            controllerConnection.notify(" Update Database Error ");
+        }
+        catch (IOException e) {
+            controllerConnection.notify("EXP: Update Database Error ");
         }
     }
 

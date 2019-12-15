@@ -1,11 +1,11 @@
 package Server;
 
+import Server.EventListener;
 
+public class EventManager {
+    private EventListener subscriber;
 
-public class EventManager  {
-   private EventListener subscriber;
-
-    public EventManager(EventListener subscriber ){
+    public EventManager(EventListener subscriber) {
         this.subscriber = subscriber;
     }
 
