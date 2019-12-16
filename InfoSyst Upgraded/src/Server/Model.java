@@ -14,6 +14,11 @@ class Model {
 
     private static EventManager controllerConnection = new EventManager(new Controller());
 
+    private static EventManager monoControllerConnection;
+
+    public static void setMonoControllerConnection(EventManager monoControllerConnection) {
+        Model.monoControllerConnection = monoControllerConnection;
+    }
 
     /**
      * Data is stored in serialized form;
@@ -35,7 +40,6 @@ class Model {
     public static void setComparator(Comparator<LibraryInfo> comparator) {
         runtimeDatabase.sort(comparator);
     }
-
 
 
     /**
@@ -94,10 +98,10 @@ class Model {
         for (int i = 0; i < runtimeDatabase.size(); ++i) {
             if (runtimeDatabase.get(i).toString().contains(template)) {
                 serverAnswer.append(" ").append(i).append(" ");
-                //getInfFromBase(i);
             }
         }
-        controllerConnection.notify(serverAnswer.toString());
+        monoControllerConnection.notify("SEARCH");
+        monoControllerConnection.notify(serverAnswer.toString());
     }
 
 
@@ -134,10 +138,12 @@ class Model {
                     break;
                 }
             }
+            controllerConnection.notify("ADD");
             controllerConnection.notify(Integer.toString(index));
             controllerConnection.notify(book.toString());
         } else {
-            controllerConnection.notify("EXP: Such data already exists, object not added ");
+            monoControllerConnection.notify("EXP");
+            monoControllerConnection.notify(" Such data already exists, object not added ");
         }
     }
 
@@ -176,6 +182,7 @@ class Model {
             } else {
                 runtimeDatabase.remove(index);
             }
+            controllerConnection.notify("DELETE");
             controllerConnection.notify(serverAnswer.toString());
         }
     }
