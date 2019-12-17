@@ -131,12 +131,17 @@ class Model {
     static void addInfToBase(LibraryInfo book) {
         int index = 0;
         if (!runtimeDatabase.contains(book)) {
-            for (int i = 0; i < runtimeDatabase.size(); ++i) {
+            int i = 0;
+            for (; i < runtimeDatabase.size(); ++i) {
                 if (runtimeDatabase.get(i).getBook().getTitle().compareTo(book.getBook().getTitle()) >= 0) {
                     runtimeDatabase.add(i, book);
                     index = i;
                     break;
                 }
+            }
+            if(i>=runtimeDatabase.size()) {
+                index = runtimeDatabase.size();
+                runtimeDatabase.add(0, book);
             }
             controllerConnection.notify("ADD");
             controllerConnection.notify(Integer.toString(index));
@@ -148,16 +153,7 @@ class Model {
     }
 
 
-    /**
-     * This method is used to get Object from library;
-     *
-     * @param index- index of Object that should be returned;
-     */
 
-    static void getInfFromBase(int index) {
-        if (isIndexInRange(index))
-            controllerConnection.notify(runtimeDatabase.get(index).toString());
-    }
 
 
     /**

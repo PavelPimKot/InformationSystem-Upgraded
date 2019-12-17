@@ -39,7 +39,7 @@ public class Mono implements Runnable, EventListener {
 
     /**
      * This method is used to set object by Book to the library;
-     *
+     *6
      * @param input - input stream(Console);
      * @throws IOException-
      */
@@ -303,13 +303,7 @@ public class Mono implements Runnable, EventListener {
                 case ("exit"): {
                     Model.updateDatabase();
                 }
-                default: {
-                    //  outputStream.writeUTF("EXP The entered string is not a reference command ");
-                }
             }
-        } else {
-            //   outputStream.writeUTF("EXP The entered string is not a reference command ");
-
         }
     }
 

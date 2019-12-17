@@ -5,23 +5,26 @@ import javafx.application.Platform;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.net.Socket;
 
 
 public class ServerConnection implements Runnable {
 
+    private Socket mySock;
     private ObjectInputStream inputStream;
     private ViewController controller;
 
-    ServerConnection(ObjectInputStream in, ViewController controller) {
+    ServerConnection(Socket socket , ObjectInputStream in, ViewController controller) {
         inputStream = in;
         this.controller = controller;
+        mySock = socket;
     }
 
     @Override
     public void run() {
 
         try {
-            while (true) {
+            while (!mySock.isClosed()) {
                 if (inputStream.available() != 0) {
                     String serverAnswer = inputStream.readUTF();
                     switch (serverAnswer) {

@@ -54,7 +54,7 @@ public class View extends Application {
                 }
 
 
-                Thread thread2 = new Thread(new ServerConnection(inputStream, controller));
+                Thread thread2 = new Thread(new ServerConnection(clientSocket, inputStream, controller));
 
 
                 controller.setViewTableInfo(viewTableInfo);

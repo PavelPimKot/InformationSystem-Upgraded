@@ -16,9 +16,9 @@ import java.util.concurrent.Executors;
 public class Controller implements EventListener {
 
     private static ServerSocket serverSocket;
-    public static ExecutorService executeIt = Executors.newFixedThreadPool(5);
-    public static ArrayList<Socket> clients;
-    public static ArrayList<ObjectOutputStream> outputStreams;
+    private static ExecutorService executeIt = Executors.newFixedThreadPool(5);
+    private static ArrayList<Socket> clients;
+    private static ArrayList<ObjectOutputStream> outputStreams;
 
     public static void main(String[] args) {
 
